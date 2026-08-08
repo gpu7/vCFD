@@ -5,7 +5,6 @@ from pathlib import Path
 from vcfd.config import OpenFOAMMode, Settings
 from vcfd.mcp_server import server as srv
 
-
 REPO = Path(__file__).resolve().parents[1]
 
 

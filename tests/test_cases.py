@@ -8,7 +8,6 @@ from vcfd.mcp_server.cases import create_case_from_template, list_cases, list_te
 from vcfd.mcp_server.paths import resolve_case_dir, validate_case_name
 from vcfd.mcp_server.pipe_params import set_pipe_parameters
 
-
 REPO = Path(__file__).resolve().parents[1]
 TEMPLATES = REPO / "cases" / "templates"
 

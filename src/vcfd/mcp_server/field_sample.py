@@ -37,7 +37,10 @@ def parse_vector_internal_field(path: Path) -> list[tuple[float, float, float]]:
     if m:
         comps = [float(x) for x in m.group(1).split()]
         # Single value — treat as one cell; caller may expand.
-        return [(comps[0], comps[1] if len(comps) > 1 else 0.0, comps[2] if len(comps) > 2 else 0.0)]
+        x = comps[0]
+        y = comps[1] if len(comps) > 1 else 0.0
+        z = comps[2] if len(comps) > 2 else 0.0
+        return [(x, y, z)]
 
     m = re.search(
         r"internalField\s+nonuniform\s+List<vector>\s*\n\s*(\d+)\s*\n\s*\(",

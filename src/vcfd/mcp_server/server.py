@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import zipfile
-from pathlib import Path
 from typing import Any
 
 from fastmcp import FastMCP
@@ -180,7 +179,8 @@ def clean_case(case_name: str, confirm: bool = False) -> dict[str, Any]:
     except (FileNotFoundError, ValueError) as exc:
         return fail(str(exc))
     return ok(
-        f"Cleaned case '{case_name}'. Removed: {', '.join(removed) if removed else 'nothing extra'}.",
+        f"Cleaned case '{case_name}'. "
+        f"Removed: {', '.join(removed) if removed else 'nothing extra'}.",
         data={"removed": removed},
     )
 
@@ -422,7 +422,8 @@ def summarize_results(case_name: str) -> dict[str, Any]:
     if p and dp is not None:
         summary += (
             f"Expected analytical pressure drop is about {dp:.4g} Pa for bulk velocity "
-            f"{p.bulk_velocity} m/s. Centerline velocity should be near {2 * p.bulk_velocity:.4g} m/s."
+            f"{p.bulk_velocity} m/s. Centerline velocity should be near "
+            f"{2 * p.bulk_velocity:.4g} m/s."
         )
     return ok(summary, data={"status": status, "delta_p_analytical_pa": dp})
 
@@ -536,7 +537,7 @@ def export_for_paraview(case_name: str, make_zip: bool = True) -> dict[str, Any]
     )
     if not result.ok:
         return fail(
-            f"foamToVTK reported an error, but package may still be usable.",
+            "foamToVTK reported an error, but package may still be usable.",
             data={
                 "vtk_dir": str(vtk_dir),
                 "zip_path": str(zip_path) if zip_path else None,
@@ -579,7 +580,8 @@ def main() -> None:
         # document VCFD_AUTH_TOKEN for reverse proxy / gateway validation.
         if settings.auth_token:
             print(
-                "Note: set reverse proxy or MCP client Authorization header to match VCFD_AUTH_TOKEN.",
+                "Note: set reverse proxy or MCP client Authorization "
+                "header to match VCFD_AUTH_TOKEN.",
                 file=sys.stderr,
             )
         mcp.run(

@@ -18,7 +18,9 @@ class BearerTokenMiddleware(Middleware):
     def __init__(self, token: str | None) -> None:
         self.token = (token or "").strip() or None
 
-    async def on_message(self, context: MiddlewareContext[Any], call_next: CallNext[Any, Any]) -> Any:
+    async def on_message(
+        self, context: MiddlewareContext[Any], call_next: CallNext[Any, Any]
+    ) -> Any:
         if not self.token:
             return await call_next(context)
 
