@@ -127,14 +127,17 @@ class FoamRunner:
             raise RuntimeError("docker not found on PATH; install Docker or use mock/native mode.")
         case_dir = case_dir.resolve()
         image = self.settings.openfoam_docker_image
-        # Mount parent workspace so relative paths inside container match.
+        # Mount the case parent so each case is /work/<case_name> inside the container.
         mount = str(case_dir.parent)
         inner = f"/work/{case_dir.name}"
-        # OpenFOAM docker images typically need bash -lc with sourced env.
         foam_cmd = " ".join(shlex_quote(a) for a in args)
+        # Must cd after sourcing bash.rc — OpenFOAM entry env may start in /root.
         shell = (
-            f"cd {shlex_quote(inner)} && "
-            f"(source /openfoam/bash.rc 2>/dev/null || source /opt/openfoam*/etc/bashrc 2>/dev/null || true) && "
+            "set -e; "
+            "if [ -f /openfoam/bash.rc ]; then . /openfoam/bash.rc; "
+            "elif [ -f /usr/lib/openfoam/openfoam2506/etc/bashrc ]; then "
+            ". /usr/lib/openfoam/openfoam2506/etc/bashrc; fi; "
+            f"cd {shlex_quote(inner)}; "
             f"{foam_cmd}"
         )
         return [
@@ -143,8 +146,6 @@ class FoamRunner:
             "--rm",
             "-v",
             f"{mount}:/work",
-            "-w",
-            "/work",
             image,
             "bash",
             "-lc",

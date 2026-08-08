@@ -1,0 +1,17 @@
+# Project MCP config for vCFD (requires folder trust: grok --trust once).
+[mcp_servers.vcfd]
+command = "uv"
+args = [
+    "run",
+    "--directory",
+    "/Users/richardcasey/vCFD",
+    "vcfd-mcp",
+]
+enabled = true
+
+[mcp_servers.vcfd.env]
+VCFD_OPENFOAM_MODE = "docker"
+VCFD_OPENFOAM_DOCKER_IMAGE = "opencfd/openfoam-default:2506"
+VCFD_CASES_ROOT = "/Users/richardcasey/vCFD/cases/workspace"
+VCFD_TEMPLATES_ROOT = "/Users/richardcasey/vCFD/cases/templates"
+VCFD_JOBS_ROOT = "/Users/richardcasey/vCFD/.vcfd/jobs"

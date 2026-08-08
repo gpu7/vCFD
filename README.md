@@ -120,4 +120,26 @@ You may charge for applications or services built with vCFD as an external contr
 
 ## Status
 
-MVP scaffold: mock end-to-end pipe pipeline, MCP tools, analytics, deploy stubs. Real OpenFOAM Docker/native runs and production voice wiring are the next hardening steps.
+- Mock OpenFOAM pipeline: tested (`uv run pytest`)
+- **Real OpenFOAM via Docker** (`opencfd/openfoam-default:2506`, arm64-capable): mesh + `simpleFoam` + ParaView export verified on Mac Silicon
+- Grok Build project MCP: `.grok/config.toml` (`grok mcp list`)
+- Next: Voice Agent Builder / remote HTTP MCP on EC2, richer field sampling, more templates
+
+### Docker end-to-end
+
+```bash
+# Requires Docker Desktop running and image pull once:
+docker pull opencfd/openfoam-default:2506
+./scripts/e2e_docker.sh
+```
+
+Results land under `cases/workspace/` (gitignored). Open the `.foam` or `VTK/` export in ParaView.
+
+### Grok Build MCP
+
+Project config is already set (docker mode):
+
+```bash
+grok mcp list
+# tools available after restart / new session in this directory
+```

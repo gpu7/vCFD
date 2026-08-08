@@ -11,6 +11,7 @@ from fastmcp import FastMCP
 from vcfd.analytics.poiseuille import PipeParams, compare_velocity_profile, pressure_drop
 from vcfd.config import Settings, get_settings
 from vcfd.mcp_server import cases as case_ops
+from vcfd.mcp_server.field_sample import sample_pipe_results
 from vcfd.mcp_server.foam_runner import FoamRunner
 from vcfd.mcp_server.jobs import JobManager
 from vcfd.mcp_server.paths import resolve_case_dir
@@ -32,14 +33,20 @@ mcp = FastMCP(
 _settings: Settings | None = None
 _jobs: JobManager | None = None
 _runner: FoamRunner | None = None
+_auth_middleware_installed = False
 
 
 def _init(settings: Settings | None = None) -> Settings:
-    global _settings, _jobs, _runner
+    global _settings, _jobs, _runner, _auth_middleware_installed
     _settings = settings or get_settings()
     _settings.ensure_dirs()
     _jobs = JobManager(_settings.jobs_root, max_concurrent=_settings.max_concurrent_jobs)
     _runner = FoamRunner(_settings)
+    if not _auth_middleware_installed and _settings.auth_token:
+        from vcfd.mcp_server.auth import BearerTokenMiddleware
+
+        mcp.add_middleware(BearerTokenMiddleware(_settings.auth_token))
+        _auth_middleware_installed = True
     return _settings
 
 
@@ -421,9 +428,8 @@ def summarize_results(case_name: str) -> dict[str, Any]:
 def compare_to_analytical(case_name: str) -> dict[str, Any]:
     """Compare numerical pipe flow to Hagen–Poiseuille analytical solution.
 
-    In mock mode, uses an ideal parabolic profile with small noise-free match.
-    With real OpenFOAM results, samples from case parameters (MVP: uses bulk U
-    and analytical profile as reference; full field sampling can be extended).
+    Samples the latest U field on the structured half-channel mesh and compares
+    the radial velocity profile to the analytical parabola.
     """
     try:
         path = resolve_case_dir(_s().cases_root, case_name, must_exist=True)
@@ -441,34 +447,52 @@ def compare_to_analytical(case_name: str) -> dict[str, Any]:
     if not latest or latest in {"0", "0.orig"}:
         return fail("No solved results to compare. Run the solver first.")
 
-    # MVP sampling: radial profile at analytical values (mock "perfect" numerics)
-    # For real OF, a later PR can sample foam fields; for now we report expected
-    # analytics and a mock numerical profile equal to analytical in mock mode.
-    radii = [0.0, 0.25 * p.radius, 0.5 * p.radius, 0.75 * p.radius, p.radius]
-    if _s().openfoam_mode.value == "mock":
-        numerical = [2.0 * p.bulk_velocity * (1.0 - (r / p.radius) ** 2) for r in radii]
-    else:
-        # Without field sampling utilities yet, assume bulk constraint: centerline ~ 2U
-        # and parabolic shape — mark as approximate.
+    n_axial = int(params.get("n_axial") or 40)
+    n_radial = int(params.get("n_radial") or 10)
+    sample: dict[str, Any] | None = None
+    warnings: list[str] = []
+
+    try:
+        sample = sample_pipe_results(
+            path,
+            n_axial=n_axial,
+            n_radial=n_radial,
+            radius=p.radius,
+        )
+        radii = sample["radii"]
+        numerical = sample["u_axial_mean_by_radius"]
+        if not radii:
+            raise ValueError("No radial samples extracted")
+    except Exception as exc:
+        # Fallback: ideal profile (mock or unreadable field)
+        warnings.append(f"Field sampling fallback ({exc}).")
+        radii = [0.0, 0.25 * p.radius, 0.5 * p.radius, 0.75 * p.radius, p.radius]
         numerical = [2.0 * p.bulk_velocity * (1.0 - (r / p.radius) ** 2) for r in radii]
 
+    # Note: half-channel with symmetry is not exact circular Poiseuille; still a
+    # useful laminar validation. Wall y=R should be ~0; centerline y~0 ~ 2U.
     cmp = compare_velocity_profile(p, radii, numerical)
     pct = 100.0 * cmp["max_rel_error"]
-    summary = (
-        f"Hagen–Poiseuille comparison for '{case_name}': Re ≈ {cmp['re']:.1f}, "
-        f"analytical Δp ≈ {cmp['delta_p_analytical_pa']:.4g} Pa, "
-        f"centerline U ≈ {cmp['u_centerline_analytical']:.4g} m/s. "
-        f"Max relative velocity error ≈ {pct:.3g}%."
+    u_max_num = sample["u_max"] if sample else max(numerical)
+    u_max_err = abs(u_max_num - cmp["u_centerline_analytical"]) / max(
+        cmp["u_centerline_analytical"], 1e-12
     )
-    warnings = []
+    summary = (
+        f"Hagen–Poiseuille comparison for '{case_name}' (time {latest}): "
+        f"Re ≈ {cmp['re']:.1f}, analytical Δp ≈ {cmp['delta_p_analytical_pa']:.4g} Pa, "
+        f"analytical centerline U ≈ {cmp['u_centerline_analytical']:.4g} m/s, "
+        f"numerical max U ≈ {u_max_num:.4g} m/s "
+        f"({100 * u_max_err:.2f}% vs centerline). "
+        f"Max profile relative error ≈ {pct:.3g}%."
+    )
     if not cmp["laminar_ok"]:
         warnings.append("Re is above typical laminar range; analytical Poiseuille may not apply.")
-    if _s().openfoam_mode.value != "mock":
-        warnings.append(
-            "Field sampling from OpenFOAM results is approximate in this version; "
-            "use ParaView for detailed profile inspection."
-        )
-    return ok(summary, data=cmp, warnings=warnings)
+    warnings.append(
+        "Geometry is a 2-D half-channel proxy for a pipe; expect some profile mismatch "
+        "vs exact circular Hagen–Poiseuille."
+    )
+    data = {**cmp, "sample": sample, "u_max_numerical": u_max_num, "u_max_rel_error": u_max_err}
+    return ok(summary, data=data, warnings=warnings)
 
 
 @mcp.tool

@@ -128,8 +128,7 @@ def _write_block_mesh(
 ) -> None:
     """Rewrite blockMeshDict for a 2-D half-channel of height=radius, length=L."""
     path = case_dir / "system" / "blockMeshDict"
-    content = f"""/*--------------------------------*- C++ -*----------------------------------*\\
-FoamFile
+    content = f"""FoamFile
 {{
     version     2.0;
     format      ascii;
