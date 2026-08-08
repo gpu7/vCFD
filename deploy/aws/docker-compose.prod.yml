@@ -1,0 +1,52 @@
+# Production compose for EC2: MCP + Caddy (+ Docker socket for OpenFOAM jobs).
+# Used by user-data.sh from /opt/vcfd.
+
+services:
+  vcfd-mcp:
+    build:
+      context: ../..
+      dockerfile: deploy/Dockerfile
+    image: vcfd-mcp:local
+    env_file:
+      - /etc/vcfd/vcfd.env
+    environment:
+      VCFD_CASES_ROOT: /data/vcfd/cases
+      VCFD_TEMPLATES_ROOT: /app/cases/templates
+      VCFD_JOBS_ROOT: /data/vcfd/jobs
+      VCFD_TRANSPORT: http
+      VCFD_HOST: 0.0.0.0
+      VCFD_PORT: 8000
+      VCFD_OPENFOAM_MODE: docker
+    volumes:
+      - /data/vcfd:/data/vcfd
+      # Allow launching OpenFOAM containers (same host Docker).
+      # Restrict access: only the MCP container holds the socket.
+      - /var/run/docker.sock:/var/run/docker.sock
+    expose:
+      - "8000"
+    restart: unless-stopped
+    healthcheck:
+      # Streamable HTTP may not answer bare GET; process liveness is enough.
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('127.0.0.1',8000),5); s.close()"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  caddy:
+    image: caddy:2-alpine
+    depends_on:
+      - vcfd-mcp
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:

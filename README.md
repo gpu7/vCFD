@@ -98,7 +98,16 @@ See `.env.example` for all settings.
 
 ## AWS EC2
 
-See [`deploy/aws/README.md`](deploy/aws/README.md) for Ubuntu host setup, systemd, Docker Compose, and security notes.
+Automated launch scripts (AWS CLI on your Mac):
+
+```bash
+./deploy/aws/launch-ec2.sh --dry-run   # plan only
+./deploy/aws/launch-ec2.sh             # launch Ubuntu + Docker + Caddy + MCP
+./deploy/aws/status.sh
+./deploy/aws/teardown.sh
+```
+
+Details: [`deploy/aws/README.md`](deploy/aws/README.md).
 
 ## Project layout
 

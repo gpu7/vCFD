@@ -29,6 +29,8 @@ cases/work/
 jobs/
 *.log
 .vcfd/
+deploy/aws/out/
+*.pem
 
 # OpenFOAM runtime artifacts in templates (keep clean)
 **/processor*/

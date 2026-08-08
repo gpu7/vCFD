@@ -1,26 +1,88 @@
-# AWS EC2 deployment (Ubuntu)
+# AWS EC2 deployment for vCFD
 
-## Recommended starting point
+Scripts in this directory launch an Ubuntu 24.04 EC2 host that runs:
 
-| Item | Suggestion |
-|------|------------|
-| Instance | `c6i.xlarge` (4 vCPU) or `c6i.large` for demos |
-| OS | Ubuntu 24.04 LTS |
-| Storage | 50–100 GB gp3 EBS for cases/results |
-| Network | Security group: SSH from your IP; HTTPS 443 from internet (or only your IP) |
-| TLS | Caddy or nginx + Let’s Encrypt, or ALB + ACM |
+- **vCFD MCP** (FastMCP streamable-http on port 8000 inside Docker)
+- **Caddy** reverse proxy on **80/443**
+- **OpenFOAM** via Docker (`opencfd/openfoam-default:2506`) using the host Docker socket
 
-## Steps
+Your AWS CLI is used from the Mac (`aws sts get-caller-identity`).
 
-1. Launch Ubuntu EC2 and attach an EBS volume mounted at `/data/vcfd`.
-2. Install Docker **or** OpenFOAM packages + Python 3.12 + `uv`.
-3. Clone `https://github.com/gpu7/vCFD` into `/opt/vcfd`.
-4. Create `/etc/vcfd/vcfd.env` from `.env.example` with a strong `VCFD_AUTH_TOKEN`.
-5. Either:
-   - `docker compose -f deploy/docker-compose.yml up -d`, or
-   - `uv sync` + install `deploy/systemd/vcfd-mcp.service`.
-6. Put Caddy/nginx in front with TLS terminating on 443, proxy to `127.0.0.1:8000`.
-7. In Grok Voice Agent Builder (or Speech-to-Speech session), add remote MCP:
+## Quick start (from the vCFD repo)
+
+```bash
+# 1) Dry-run (no instance created) — validates AMI, VPC, SG plan
+./deploy/aws/launch-ec2.sh --dry-run
+
+# 2) Launch (Graviton / arm64 by default — good cost + matches OF arm64 images)
+./deploy/aws/launch-ec2.sh
+
+# Or x86:
+./deploy/aws/launch-ec2.sh --instance-type c6i.xlarge
+
+# With a real domain for automatic HTTPS:
+./deploy/aws/launch-ec2.sh --domain cfd.example.com --email you@example.com
+```
+
+Save the printed **VCFD_AUTH_TOKEN** and **public IP**. State is written to:
+
+```
+deploy/aws/out/latest.env      # instance id, IP, paths
+deploy/aws/out/latest.token    # bearer token only (gitignored)
+```
+
+### Status / update / teardown
+
+```bash
+./deploy/aws/status.sh
+./deploy/aws/update.sh          # git pull + rebuild on the host
+./deploy/aws/teardown.sh        # terminate instance
+```
+
+### SSH
+
+```bash
+source deploy/aws/out/latest.env
+ssh -i "$KEY_FILE" ubuntu@"$PUBLIC_IP"
+sudo tail -f /var/log/vcfd-user-data.log
+```
+
+Bootstrap typically takes **10–20 minutes** (Docker + OpenFOAM image pull + first build).
+
+## What gets created
+
+| Resource | Name / notes |
+|----------|----------------|
+| EC2 instance | Tag `Name=vcfd-mcp`, Ubuntu 24.04, default VPC + public IP |
+| Key pair | `vcfd-ec2` → `~/.ssh/vcfd-ec2.pem` (created if missing) |
+| Security group | `vcfd-mcp-sg`: SSH from your IP `/32`, HTTP/HTTPS from `0.0.0.0/0` |
+| Root volume | gp3, default 80 GB |
+| On host | `/opt/vcfd` (git clone), `/data/vcfd` (cases/jobs), `/etc/vcfd/vcfd.env` |
+
+## Architecture on the instance
+
+```
+Internet → :80/:443 Caddy → vcfd-mcp:8000 (/mcp)
+                              ↓ docker.sock
+                         OpenFOAM containers
+                              ↓
+                         /data/vcfd/cases
+```
+
+## Grok Voice remote MCP
+
+After the stack is up:
+
+```json
+{
+  "type": "mcp",
+  "server_url": "http://YOUR_PUBLIC_IP/mcp",
+  "server_label": "vcfd",
+  "authorization": "Bearer YOUR_TOKEN"
+}
+```
+
+Prefer **HTTPS** once DNS points at the instance:
 
 ```json
 {
@@ -31,21 +93,53 @@
 }
 ```
 
-Exact MCP path depends on FastMCP streamable-http routing (commonly `/mcp`). Verify with MCP Inspector.
+System prompt: `prompts/voice_agent_system.md`.
 
-8. Paste system prompt from `prompts/voice_agent_system.md`.
+> **Note:** Some Voice clients require HTTPS. For IP-only demos, use a tunnel (Cloudflare Tunnel / ngrok) or attach a domain.
 
-## Secrets
+## Recommended instance sizes
 
-- Store `VCFD_AUTH_TOKEN` and any xAI keys in AWS Secrets Manager or SSM Parameter Store.
-- Never commit tokens.
+| Use | Type | Notes |
+|-----|------|--------|
+| Demo / small laminar cases | `c7g.large` or `c7g.xlarge` | Arm/Graviton, lower cost |
+| Heavier CFD | `c7g.2xlarge` or `c6i.2xlarge` | More cores for mesh/solve |
+| x86-only images | `c6i.xlarge` | If an OF image is amd64-only |
 
-## OpenFOAM on EC2
+Default script: **`c7g.xlarge`**.
 
-- **Docker mode**: set `VCFD_OPENFOAM_MODE=docker` and mount docker.sock (understand security implications).
-- **Native mode**: install OpenFOAM, set `VCFD_OPENFOAM_MODE=native` and `VCFD_OPENFOAM_BASHRC=/path/to/etc/bashrc`.
+## Cost control
 
-## Cost notes
+- Run `./deploy/aws/teardown.sh` when idle (stops compute charges).
+- Or stop (not terminate) the instance in the console to keep disk.
+- OpenFOAM image + cases use EBS; 80 GB gp3 is a starting point.
+- Cap concurrent solvers: `VCFD_MAX_CONCURRENT_JOBS` in `/etc/vcfd/vcfd.env`.
 
-- Stop or hibernate instances when idle.
-- Keep demo meshes coarse; cap concurrent jobs via `VCFD_MAX_CONCURRENT_JOBS`.
+## Security notes
+
+- Bearer token is required for remote MCP when `VCFD_AUTH_TOKEN` is set.
+- Docker socket is mounted into the MCP container so it can run OpenFOAM — treat the host as a **single-tenant CFD worker**, not a multi-tenant public PaaS.
+- Tighten SG later: restrict 80/443 to your IP or put an ALB + WAF in front.
+- Never commit `deploy/aws/out/` or `.pem` files (gitignored).
+
+## Manual / existing instance
+
+1. Launch Ubuntu 24.04 yourself.
+2. Copy `user-data.sh` logic or run equivalent steps.
+3. Place env at `/etc/vcfd/vcfd.env` (see `env.example`).
+4. `docker compose -f deploy/aws/docker-compose.prod.yml up -d` from `/opt/vcfd`.
+
+## Troubleshooting
+
+| Symptom | Check |
+|---------|--------|
+| SSH timeout | SG SSH CIDR, instance running, public IP |
+| `/mcp` connection refused | `sudo tail -100 /var/log/vcfd-user-data.log`, `docker compose ps` |
+| OpenFOAM jobs fail | `docker pull opencfd/openfoam-default:2506`, socket mount |
+| Auth errors from Voice | Matching `Authorization: Bearer` vs `/etc/vcfd/vcfd.env` |
+| HTTPS cert fails | DNS A record, ports 80/443 open, `VCFD_DOMAIN` + email set |
+
+## Next after EC2 is up
+
+1. Confirm `./deploy/aws/status.sh` and hit `/mcp`.
+2. Point Grok Voice Agent Builder at the MCP URL + token.
+3. Voice: “Create a Hagen–Poiseuille pipe case and mesh it.”

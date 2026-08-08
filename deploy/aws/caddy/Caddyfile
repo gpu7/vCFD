@@ -1,0 +1,20 @@
+# Caddy reverse proxy in front of vCFD MCP (streamable-http on :8000).
+# When VCFD_DOMAIN is set, Caddy obtains a Let's Encrypt cert automatically.
+# When unset, the container uses a generated default that listens on :80.
+
+{
+	# email filled by user-data when VCFD_ACME_EMAIL is set
+	# email you@example.com
+}
+
+# Placeholder host — user-data rewrites this file for domain or :80 IP mode.
+:80 {
+	encode gzip
+	reverse_proxy vcfd-mcp:8000
+	header {
+		# Basic hardening
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		-Server
+	}
+}
