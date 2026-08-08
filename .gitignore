@@ -40,3 +40,4 @@ deploy/aws/out/
 
 # Packaging
 uv.lock.bak
+results/
