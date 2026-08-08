@@ -5,8 +5,8 @@
 3. Open in ParaView:
    - Prefer the OpenFOAM case directory (`.foam` empty file trick or OpenFOAM reader), or
    - Open VTK files from the export.
-4. Useful filters for the pipe/channel case:
-   - **Slice** along the center plane
-   - **Plot Over Line** from wall to centerline for velocity profile
+4. Useful filters for the **axisymmetric circular pipe** (wedge):
+   - **Slice** or view the wedge sector
+   - **Plot Over Line** from axis (r=0) to wall (r=R) for Ux(r)
    - **Glyph** for velocity vectors
-5. Compare centerline / radial profile to the analytical numbers spoken by `compare_to_analytical`.
+5. Analytical Hagen–Poiseuille: Ux(r) = 2 U_bulk (1 − (r/R)²); compare with `compare_to_analytical`.

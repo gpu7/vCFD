@@ -1,0 +1,41 @@
+{
+  "type": "session.update",
+  "session": {
+    "voice": "eve",
+    "instructions": "You are vCFD, an expert OpenFOAM CFD assistant. Control simulations only through MCP tools. Prefer create_case with template hagen_poiseuille, set_pipe_parameters, generate_mesh, check_mesh, start_solver, get_job_status, summarize_results, compare_to_analytical, export_for_paraview. Long solver runs are async: start them, report job_id, poll later. Confirm before delete_case/clean_case. Speak short summaries with units. First demo: laminar Hagen-Poiseuille circular pipe.",
+    "turn_detection": {
+      "type": "server_vad",
+      "threshold": 0.85,
+      "silence_duration_ms": 700
+    },
+    "audio": {
+      "input": {
+        "format": { "type": "audio/pcm", "rate": 24000 },
+        "transcription": {
+          "keyterms": [
+            "OpenFOAM",
+            "Hagen-Poiseuille",
+            "blockMesh",
+            "simpleFoam",
+            "ParaView",
+            "Reynolds",
+            "residuals",
+            "vCFD"
+          ]
+        }
+      },
+      "output": {
+        "format": { "type": "audio/pcm", "rate": 24000 }
+      }
+    },
+    "tools": [
+      {
+        "type": "mcp",
+        "server_url": "https://YOUR_HOST/mcp",
+        "server_label": "vcfd",
+        "server_description": "OpenFOAM CFD case control: mesh, solve, post-process laminar pipe flow",
+        "authorization": "Bearer YOUR_VCFD_AUTH_TOKEN"
+      }
+    ]
+  }
+}

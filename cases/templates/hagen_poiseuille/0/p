@@ -26,13 +26,17 @@ boundaryField
     {
         type            zeroGradient;
     }
-    symmetry
-    {
-        type            symmetryPlane;
-    }
-    frontAndBack
+    axis
     {
         type            empty;
+    }
+    front
+    {
+        type            wedge;
+    }
+    back
+    {
+        type            wedge;
     }
 }
 

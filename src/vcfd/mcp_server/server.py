@@ -200,10 +200,12 @@ def set_pipe_parameters(
     bulk_velocity: float | None = None,
     n_axial: int | None = None,
     n_radial: int | None = None,
+    wedge_half_angle_deg: float | None = None,
 ) -> dict[str, Any]:
-    """Set Hagen–Poiseuille pipe geometry, fluid properties, and mesh resolution.
+    """Set Hagen–Poiseuille circular pipe geometry (axisymmetric wedge), fluid, mesh.
 
     Units: meters, Pa·s (dynamic viscosity), kg/m³, m/s.
+    Geometry is a true circular pipe extruded as a thin wedge about the axis.
     """
     try:
         path = resolve_case_dir(_s().cases_root, case_name, must_exist=True)
@@ -216,6 +218,7 @@ def set_pipe_parameters(
             bulk_velocity=bulk_velocity,
             n_axial=n_axial,
             n_radial=n_radial,
+            wedge_half_angle_deg=wedge_half_angle_deg,
         )
     except (FileNotFoundError, ValueError) as exc:
         return fail(str(exc))
@@ -223,7 +226,7 @@ def set_pipe_parameters(
     laminar = "laminar" if data["laminar_ok"] else "possibly transitional/turbulent"
     p = data["parameters"]
     return ok(
-        f"Updated pipe parameters for '{case_name}'. "
+        f"Updated circular pipe parameters for '{case_name}' (axisymmetric wedge). "
         f"Radius {p['radius']} m, length {p['length']} m, bulk velocity {p['bulk_velocity']} m/s, "
         f"Re ≈ {re:.1f} ({laminar}). Remesh before solving.",
         data=data,
@@ -469,8 +472,6 @@ def compare_to_analytical(case_name: str) -> dict[str, Any]:
         radii = [0.0, 0.25 * p.radius, 0.5 * p.radius, 0.75 * p.radius, p.radius]
         numerical = [2.0 * p.bulk_velocity * (1.0 - (r / p.radius) ** 2) for r in radii]
 
-    # Note: half-channel with symmetry is not exact circular Poiseuille; still a
-    # useful laminar validation. Wall y=R should be ~0; centerline y~0 ~ 2U.
     cmp = compare_velocity_profile(p, radii, numerical)
     pct = 100.0 * cmp["max_rel_error"]
     u_max_num = sample["u_max"] if sample else max(numerical)
@@ -478,7 +479,7 @@ def compare_to_analytical(case_name: str) -> dict[str, Any]:
         cmp["u_centerline_analytical"], 1e-12
     )
     summary = (
-        f"Hagen–Poiseuille comparison for '{case_name}' (time {latest}): "
+        f"Hagen–Poiseuille comparison for '{case_name}' (time {latest}, circular pipe): "
         f"Re ≈ {cmp['re']:.1f}, analytical Δp ≈ {cmp['delta_p_analytical_pa']:.4g} Pa, "
         f"analytical centerline U ≈ {cmp['u_centerline_analytical']:.4g} m/s, "
         f"numerical max U ≈ {u_max_num:.4g} m/s "
@@ -487,11 +488,19 @@ def compare_to_analytical(case_name: str) -> dict[str, Any]:
     )
     if not cmp["laminar_ok"]:
         warnings.append("Re is above typical laminar range; analytical Poiseuille may not apply.")
-    warnings.append(
-        "Geometry is a 2-D half-channel proxy for a pipe; expect some profile mismatch "
-        "vs exact circular Hagen–Poiseuille."
-    )
-    data = {**cmp, "sample": sample, "u_max_numerical": u_max_num, "u_max_rel_error": u_max_err}
+    # Uniform inlet develops toward Poiseuille; short pipes / coarse meshes leave residual error.
+    if u_max_err > 0.05:
+        warnings.append(
+            "Centerline velocity still differs from 2*U_bulk; flow may not be fully developed "
+            "or the mesh is coarse. Try a longer pipe or more radial cells."
+        )
+    data = {
+        **cmp,
+        "sample": sample,
+        "u_max_numerical": u_max_num,
+        "u_max_rel_error": u_max_err,
+        "geometry": "axisymmetric_wedge_pipe",
+    }
     return ok(summary, data=data, warnings=warnings)
 
 

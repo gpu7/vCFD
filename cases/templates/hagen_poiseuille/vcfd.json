@@ -3,15 +3,17 @@
   "solver": "simpleFoam",
   "physics": {
     "flow": "laminar_incompressible",
-    "validation": "hagen_poiseuille"
+    "validation": "hagen_poiseuille",
+    "geometry": "axisymmetric_wedge_pipe"
   },
   "parameters": {
     "radius": 0.05,
-    "length": 1.0,
+    "length": 2.0,
     "viscosity": 0.1,
     "density": 1000.0,
     "bulk_velocity": 0.1,
-    "n_axial": 40,
-    "n_radial": 10
+    "n_axial": 50,
+    "n_radial": 20,
+    "wedge_half_angle_deg": 5.0
   }
 }

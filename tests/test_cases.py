@@ -44,11 +44,13 @@ def test_set_pipe_parameters(tmp_path: Path):
     data = set_pipe_parameters(case, radius=0.02, bulk_velocity=0.05, length=0.5)
     assert data["parameters"]["radius"] == 0.02
     assert data["reynolds_number"] > 0
+    assert data["geometry"] == "axisymmetric_wedge_pipe"
     bmd = (case / "system" / "blockMeshDict").read_text(encoding="utf-8")
-    assert "0.02" in bmd
     assert "0.5" in bmd
+    assert "wedge" in bmd
     u = (case / "0" / "U").read_text(encoding="utf-8")
     assert "0.05" in u
+    assert "wedge" in u
 
 
 def test_templates_available():

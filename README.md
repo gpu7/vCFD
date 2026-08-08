@@ -89,12 +89,18 @@ Through MCP tools (or voice):
 
 See `.env.example` for all settings.
 
-## Voice agent
+## Voice agent (Grok Voice Agent Builder)
 
-1. Deploy MCP with HTTP transport (`vcfd serve --transport http`).
-2. Protect with `VCFD_AUTH_TOKEN` + reverse proxy TLS.
-3. Register remote MCP in Grok Voice Agent Builder or Speech-to-Speech `session.update`.
-4. Use system prompt in [`prompts/voice_agent_system.md`](prompts/voice_agent_system.md).
+1. Deploy public MCP (EC2: `./deploy/aws/launch-ec2.sh`).
+2. Follow **[`prompts/voice_agent_builder.md`](prompts/voice_agent_builder.md)** — console steps + MCP fields.
+3. System prompt: [`prompts/voice_agent_system.md`](prompts/voice_agent_system.md).
+4. Code / paste helpers: `voice/session.example.json`, `scripts/voice_session_snippet.py --from-latest`.
+
+```bash
+./deploy/aws/launch-ec2.sh
+uv run python scripts/voice_session_snippet.py --from-latest
+# Paste URL + Bearer token into Voice Agent Builder remote MCP
+```
 
 ## AWS EC2
 
