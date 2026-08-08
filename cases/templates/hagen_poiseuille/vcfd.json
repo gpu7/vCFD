@@ -1,0 +1,17 @@
+{
+  "template": "hagen_poiseuille",
+  "solver": "simpleFoam",
+  "physics": {
+    "flow": "laminar_incompressible",
+    "validation": "hagen_poiseuille"
+  },
+  "parameters": {
+    "radius": 0.05,
+    "length": 1.0,
+    "viscosity": 0.1,
+    "density": 1000.0,
+    "bulk_velocity": 0.1,
+    "n_axial": 40,
+    "n_radial": 10
+  }
+}

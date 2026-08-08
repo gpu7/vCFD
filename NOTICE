@@ -1,0 +1,18 @@
+vCFD
+Copyright (c) 2026 Richard Casey / gpu7
+
+This software is licensed under the MIT License (see LICENSE).
+
+Third-party runtime: OpenFOAM
+-----------------------------
+vCFD does not include, modify, or link against OpenFOAM source code.
+OpenFOAM is invoked as an external program (subprocess / Docker container).
+
+OpenFOAM is copyright its respective authors and is licensed under the
+GNU General Public License version 3 (GPLv3). See:
+  https://www.openfoam.com/licensing
+  https://gitlab.com/openfoam/core/openfoam
+
+Users and operators must obtain and install OpenFOAM separately under its
+own license terms. Case templates shipped with vCFD are original configuration
+files for use with OpenFOAM; they are not OpenFOAM source code.

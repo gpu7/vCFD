@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[oc]
+*.egg-info
+build/
+dist/
+wheels/
+.venv/
+.python-version
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+*.egg
+.coverage
+htmlcov/
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Runtime / secrets
+.env
+.env.*
+!.env.example
+cases/workspace/
+cases/work/
+jobs/
+*.log
+.vcfd/
+
+# OpenFOAM runtime artifacts in templates (keep clean)
+**/processor*/
+**/VTK/
+**/postProcessing/
+**/dynamicCode/
+
+# Packaging
+uv.lock.bak

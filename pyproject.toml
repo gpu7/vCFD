@@ -1,0 +1,52 @@
+[project]
+name = "vcfd"
+version = "0.1.0"
+description = "Voice-driven CFD: Grok Voice + MCP + OpenFOAM + ParaView"
+readme = "README.md"
+authors = [
+    { name = "Richard Casey", email = "richardcaseyhpc@gmail.com" }
+]
+requires-python = ">=3.12"
+license = { text = "MIT" }
+keywords = ["cfd", "openfoam", "mcp", "voice", "grok", "paraview"]
+dependencies = [
+    "fastmcp>=2.0",
+    "foamlib>=1.0",
+    "httpx",
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+]
+
+[project.scripts]
+vcfd = "vcfd.cli:main"
+vcfd-mcp = "vcfd.mcp_server.server:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.8",
+]
+
+[build-system]
+requires = ["uv_build>=0.11.24,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "ruff>=0.16.2",
+]

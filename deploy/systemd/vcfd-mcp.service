@@ -1,0 +1,20 @@
+[Unit]
+Description=vCFD MCP Server
+After=network.target
+
+[Service]
+Type=simple
+User=vcfd
+Group=vcfd
+WorkingDirectory=/opt/vcfd
+EnvironmentFile=-/etc/vcfd/vcfd.env
+ExecStart=/opt/vcfd/.venv/bin/vcfd serve --transport http --host 0.0.0.0 --port 8000
+Restart=on-failure
+RestartSec=5
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

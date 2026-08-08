@@ -1,0 +1,27 @@
+# Local / EC2 compose: MCP server (+ optional OpenFOAM note).
+# OpenFOAM runs via docker-from-docker or native mode on the host.
+services:
+  vcfd-mcp:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      VCFD_CASES_ROOT: /data/cases
+      VCFD_TEMPLATES_ROOT: /app/cases/templates
+      VCFD_JOBS_ROOT: /data/jobs
+      VCFD_OPENFOAM_MODE: ${VCFD_OPENFOAM_MODE:-mock}
+      VCFD_OPENFOAM_DOCKER_IMAGE: ${VCFD_OPENFOAM_DOCKER_IMAGE:-opencfd/openfoam-default:2506}
+      VCFD_AUTH_TOKEN: ${VCFD_AUTH_TOKEN:-}
+      VCFD_TRANSPORT: http
+      VCFD_HOST: 0.0.0.0
+      VCFD_PORT: 8000
+    volumes:
+      - vcfd-data:/data
+      # Uncomment to allow MCP container to launch OpenFOAM containers:
+      # - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+
+volumes:
+  vcfd-data:
