@@ -39,6 +39,13 @@ deploy/aws/out/latest.token    # bearer token only (gitignored)
 ./deploy/aws/teardown.sh        # terminate instance
 ```
 
+### SSH when your home IP changes
+
+```bash
+./deploy/aws/update-aws-sg-my-ip.sh --dry-run
+./deploy/aws/update-aws-sg-my-ip.sh   # updates SG port 22 to your current public IP
+```
+
 ### SSH
 
 ```bash
