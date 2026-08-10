@@ -93,8 +93,8 @@ else
   aws s3 cp "s3://${BUCKET}/${OBJ}" "$OUT"
 fi
 
-# Unzip if zip
-if [[ "$OUT" == *.zip ]]; then
+# Unzip if valid zip
+if [[ "$OUT" == *.zip ]] && unzip -t "$OUT" >/dev/null 2>&1; then
   UNPACK="${DEST_DIR}/$(basename "$OUT" .zip)_export"
   rm -rf "$UNPACK"
   mkdir -p "$UNPACK"
@@ -109,6 +109,8 @@ if [[ "$OUT" == *.zip ]]; then
   else
     echo "Unpacked to: $UNPACK"
   fi
+elif [[ "$OUT" == *.zip ]]; then
+  echo "Downloaded file is not a valid zip (left as-is): $OUT"
 fi
 
 echo "Done: $OUT"
