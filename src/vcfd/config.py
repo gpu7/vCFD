@@ -34,6 +34,11 @@ class Settings(BaseSettings):
     port: int = 8000
     max_concurrent_jobs: int = 2
     default_job_timeout_sec: int = 3600
+    # S3 ParaView export (optional). When set, export_for_paraview uploads the zip.
+    s3_bucket: str | None = None
+    s3_prefix: str = "paraview"
+    s3_region: str | None = None
+    s3_presign_expiry_sec: int = 86400  # 24h default
 
     def ensure_dirs(self) -> None:
         self.cases_root.mkdir(parents=True, exist_ok=True)

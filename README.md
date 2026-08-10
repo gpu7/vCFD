@@ -150,6 +150,15 @@ docker pull opencfd/openfoam-default:2506
 
 Results land under `cases/workspace/` (gitignored). Open the `.foam` or `VTK/` export in ParaView.
 
+### ParaView via S3 (Mac)
+
+After `export_for_paraview` on a server with `VCFD_S3_BUCKET` configured:
+
+```bash
+./scripts/fetch_paraview_from_s3.sh --latest
+# open results/*_export/… in ParaView
+```
+
 ### Grok Build MCP
 
 Project config is already set (docker mode):

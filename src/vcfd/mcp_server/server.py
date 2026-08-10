@@ -506,8 +506,16 @@ def compare_to_analytical(case_name: str) -> dict[str, Any]:
 
 
 @mcp.tool
-def export_for_paraview(case_name: str, make_zip: bool = True) -> dict[str, Any]:
-    """Export case for ParaView via foamToVTK and optional zip package on disk."""
+def export_for_paraview(
+    case_name: str,
+    make_zip: bool = True,
+    upload_s3: bool = True,
+) -> dict[str, Any]:
+    """Export case for ParaView (foamToVTK + zip).
+
+    When VCFD_S3_BUCKET is configured and upload_s3 is true, uploads the zip to
+    S3 and returns a time-limited presigned HTTPS download URL for the Mac.
+    """
     try:
         path = resolve_case_dir(_s().cases_root, case_name, must_exist=True)
     except (FileNotFoundError, ValueError) as exc:
@@ -529,30 +537,65 @@ def export_for_paraview(case_name: str, make_zip: bool = True) -> dict[str, Any]
                 for f in (path / t).rglob("*"):
                     if f.is_file():
                         zf.write(f, arcname=str(f.relative_to(path.parent)))
-    summary = (
-        f"Exported '{case_name}' for ParaView. "
-        f"VTK dir: {vtk_dir}. "
-        + (f"Zip package: {zip_path}. " if zip_path else "")
-        + "Open the case or VTK files in ParaView on your Mac."
-    )
-    if not result.ok:
-        return fail(
-            "foamToVTK reported an error, but package may still be usable.",
-            data={
-                "vtk_dir": str(vtk_dir),
-                "zip_path": str(zip_path) if zip_path else None,
-                "output_tail": result.stdout[-1500:],
-            },
-            warnings=["foamToVTK non-zero exit"],
+
+    s3_info: dict[str, Any] | None = None
+    s3_warnings: list[str] = []
+    settings = _s()
+    if make_zip and zip_path and upload_s3 and settings.s3_bucket:
+        try:
+            from vcfd.mcp_server.s3_export import upload_paraview_zip
+
+            s3_info = upload_paraview_zip(
+                zip_path,
+                bucket=settings.s3_bucket,
+                prefix=settings.s3_prefix,
+                region=settings.s3_region,
+                case_name=case_name,
+                presign_expiry_sec=settings.s3_presign_expiry_sec,
+            )
+        except Exception as exc:
+            s3_warnings.append(f"S3 upload failed: {exc}")
+
+    parts = [
+        f"Exported '{case_name}' for ParaView.",
+        f"VTK dir: {vtk_dir}." if vtk_dir.exists() else "",
+        f"Zip package: {zip_path}." if zip_path else "",
+    ]
+    if s3_info and s3_info.get("presigned_url"):
+        hours = max(1, int((s3_info.get("presign_expiry_sec") or 3600) / 3600))
+        parts.append(
+            f"Uploaded to {s3_info['s3_uri']}. "
+            f"Download on your Mac with the presigned URL (valid about {hours} hour(s)), "
+            f"or run: ./scripts/fetch_paraview_from_s3.sh --case {case_name}"
         )
-    return ok(
-        summary,
-        data={
-            "vtk_dir": str(vtk_dir) if vtk_dir.exists() else None,
-            "zip_path": str(zip_path) if zip_path else None,
-            "case_path": str(path),
-        },
-    )
+    elif s3_info:
+        parts.append(f"Uploaded to {s3_info['s3_uri']}.")
+    elif settings.s3_bucket and upload_s3 and not s3_info:
+        parts.append("S3 upload was requested but did not complete.")
+    else:
+        parts.append(
+            "Open the case or VTK files in ParaView on your Mac "
+            "(or enable VCFD_S3_BUCKET for automatic cloud export)."
+        )
+    summary = " ".join(p for p in parts if p)
+
+    data: dict[str, Any] = {
+        "vtk_dir": str(vtk_dir) if vtk_dir.exists() else None,
+        "zip_path": str(zip_path) if zip_path else None,
+        "case_path": str(path),
+        "s3": s3_info,
+        "download_url": (s3_info or {}).get("presigned_url"),
+        "s3_uri": (s3_info or {}).get("s3_uri"),
+    }
+    warnings = list(s3_warnings)
+    if not result.ok:
+        warnings.append("foamToVTK non-zero exit")
+        return fail(
+            summary if s3_info else "foamToVTK reported an error; package may still be usable.",
+            data={**data, "output_tail": result.stdout[-1500:]},
+            warnings=warnings,
+        )
+    return ok(summary, data=data, warnings=warnings)
 
 
 def _pipe_from_params(params: dict[str, Any]) -> PipeParams | None:

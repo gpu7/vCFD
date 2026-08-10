@@ -17,6 +17,10 @@ services:
       VCFD_HOST: 0.0.0.0
       VCFD_PORT: 8000
       VCFD_OPENFOAM_MODE: docker
+      # Optional S3 export — set in /etc/vcfd/vcfd.env or here:
+      # VCFD_S3_BUCKET: vcfd-results-ACCOUNT
+      # VCFD_S3_PREFIX: paraview
+      # VCFD_S3_REGION: us-east-1
     volumes:
       - /data/vcfd:/data/vcfd
       # Allow launching OpenFOAM containers (same host Docker).

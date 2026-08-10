@@ -10,6 +10,7 @@ requires-python = ">=3.12"
 license = { text = "MIT" }
 keywords = ["cfd", "openfoam", "mcp", "voice", "grok", "paraview"]
 dependencies = [
+    "boto3>=1.43.68",
     "fastmcp>=2.0",
     "foamlib>=1.0",
     "httpx",
