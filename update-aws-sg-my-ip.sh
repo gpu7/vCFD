@@ -8,11 +8,11 @@
 # By default only port 22 is managed. Ports 80/443 stay world-open for public
 # MCP / Caddy unless you explicitly set PORTS to include them.
 #
-# Usage (on your Mac when home IP changes):
-#   ./deploy/aws/update-aws-sg-my-ip.sh
-#   ./deploy/aws/update-aws-sg-my-ip.sh --dry-run
-#   MY_IP=1.2.3.4 ./deploy/aws/update-aws-sg-my-ip.sh
-#   source deploy/aws/out/latest.env && SG_ID=$SG_ID ./deploy/aws/update-aws-sg-my-ip.sh
+# Usage (on your Mac when home IP changes, from the vCFD repo root):
+#   ./update-aws-sg-my-ip.sh
+#   ./update-aws-sg-my-ip.sh --dry-run
+#   MY_IP=1.2.3.4 ./update-aws-sg-my-ip.sh
+#   source deploy/aws/out/latest.env && SG_ID=$SG_ID ./update-aws-sg-my-ip.sh
 #
 # Env:
 #   AWS_REGION  default: us-east-1 (or REGION / AWS_DEFAULT_REGION)
@@ -25,7 +25,8 @@
 
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+# Script lives at repo root
+ROOT="$(cd "$(dirname "$0")" && pwd)"
 STATE_ENV="$ROOT/deploy/aws/out/latest.env"
 
 DRY_RUN=0

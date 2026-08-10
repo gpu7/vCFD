@@ -38,8 +38,9 @@ sudo docker compose -f deploy/aws/docker-compose.prod.yml up -d
 From the Mac (before SSH if the IP changed overnight):
 
 ```bash
-./deploy/aws/update-aws-sg-my-ip.sh --dry-run
-./deploy/aws/update-aws-sg-my-ip.sh
+# from repo root
+./update-aws-sg-my-ip.sh --dry-run
+./update-aws-sg-my-ip.sh
 ```
 
 Defaults: region `us-east-1`, security group `sg-052d8e33c3c5145a9` (or `SG_ID` from `deploy/aws/out/latest.env`), port **22 only**. Leaves 80/443 world-open for public MCP.

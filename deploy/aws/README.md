@@ -42,8 +42,9 @@ deploy/aws/out/latest.token    # bearer token only (gitignored)
 ### SSH when your home IP changes
 
 ```bash
-./deploy/aws/update-aws-sg-my-ip.sh --dry-run
-./deploy/aws/update-aws-sg-my-ip.sh   # updates SG port 22 to your current public IP
+# from repo root
+./update-aws-sg-my-ip.sh --dry-run
+./update-aws-sg-my-ip.sh   # updates SG port 22 to your current public IP
 ```
 
 ### SSH
