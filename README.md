@@ -155,8 +155,11 @@ Results land under `cases/workspace/` (gitignored). Open the `.foam` or `VTK/` e
 After `export_for_paraview` on a server with `VCFD_S3_BUCKET` configured:
 
 ```bash
+# Hands-off: watch S3 → download → open ParaView
+./scripts/install_paraview_s3_watch.sh install
+
+# Or one-shot:
 ./scripts/fetch_paraview_from_s3.sh --latest
-# open results/*_export/… in ParaView
 ```
 
 ### Grok Build MCP
