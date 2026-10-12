@@ -1,4 +1,13 @@
 # Project MCP config for vCFD (requires folder trust: grok --trust once).
+# Project files only load [mcp_servers], [plugins], [permission], and [mcp].
+# [ui] and [sandbox] in this file are ignored. Select the sandbox with:
+#   grok --sandbox vcfd
+# or set sandbox.profile in ~/.grok/config.toml. See .grok/sandbox.toml.
+#
+# No [plugins] block: agent-bitcoin has no project plugin list to copy.
+# No .grok/hooks/: the source repo has none. Hooks fail open, so they are
+# not used as the security boundary. Deny rules and the sandbox profile are.
+
 [mcp_servers.vcfd]
 command = "uv"
 args = [
@@ -15,3 +24,70 @@ VCFD_OPENFOAM_DOCKER_IMAGE = "opencfd/openfoam-default:2506"
 VCFD_CASES_ROOT = "/Users/richardcasey/vCFD/cases/workspace"
 VCFD_TEMPLATES_ROOT = "/Users/richardcasey/vCFD/cases/templates"
 VCFD_JOBS_ROOT = "/Users/richardcasey/vCFD/.vcfd/jobs"
+
+# Allow rules are not a closed allowlist. Unlisted commands fall through to
+# the session permission mode. Deny always wins over allow and over always-approve.
+#
+# Dropped from the agent-bitcoin posture (that repo has no .grok rules; these
+# are the secrets it protects, rewritten for CFD):
+# - No macaroon, seed, nsec, or wallet-password patterns. This repo has none.
+# - cases/workspace, results/, and .vcfd/jobs stay readable. They are mesh,
+#   solver, and log output, not credential stores.
+[permission]
+allow = [
+    "Bash(git status*)",
+    "Bash(git diff*)",
+    "Bash(git log*)",
+    "Bash(git show*)",
+    "Bash(git branch*)",
+    "Bash(uv run pytest*)",
+    "Bash(uv run ruff*)",
+    "Bash(uv sync*)",
+]
+
+# Shell ask rules still prompt when the user config is always-approve.
+# MCP ask rules do not. delete_case / clean_case remain guarded by confirm=true.
+ask = [
+    "MCPTool(vcfd__delete_case)",
+    "MCPTool(vcfd__clean_case)",
+    "Bash(git reset --hard*)",
+    "Bash(git clean *)",
+    "Bash(./deploy/aws/launch-ec2.sh*)",
+    "Bash(./deploy/aws/teardown.sh*)",
+    "Bash(deploy/aws/launch-ec2.sh*)",
+    "Bash(deploy/aws/teardown.sh*)",
+]
+
+deny = [
+    # Secrets. **/.env does not match .env.example (different filename).
+    "Read(**/.env)",
+    "Edit(**/.env)",
+    "Read(**/.env.local)",
+    "Edit(**/.env.local)",
+    "Read(**/*.pem)",
+    "Edit(**/*.pem)",
+    "Read(**/*.key)",
+    "Edit(**/*.key)",
+    "Read(**/id_rsa)",
+    "Edit(**/id_rsa)",
+    "Read(**/id_ed25519)",
+    "Edit(**/id_ed25519)",
+    "Read(**/*.token)",
+    "Edit(**/*.token)",
+    "Read(**/credentials)",
+    "Edit(**/credentials)",
+    "Read(**/credentials.json)",
+    "Edit(**/credentials.json)",
+    "Read(**/deploy/aws/out/**)",
+    "Edit(**/deploy/aws/out/**)",
+
+    # History and host destruction. Feature-branch pushes stay allowed.
+    "Bash(rm -rf *)",
+    "Bash(git push --force*)",
+    "Bash(git push -f *)",
+    "Bash(git push *--force*)",
+    "Bash(git push origin master)",
+    "Bash(git push origin master *)",
+    "Bash(git push origin main)",
+    "Bash(git push origin main *)",
+]

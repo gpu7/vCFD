@@ -1,0 +1,37 @@
+# Opt-in profile. Project config.toml cannot set sandbox.profile.
+#   grok --sandbox vcfd
+#
+# extends workspace: read anywhere, write the repo + ~/.grok + temp, network on.
+# strict / read-only are not used: they block case edits, and on Linux they
+# block child-process network (Docker, gh, uv, MCP).
+#
+# Not denied here: cases/workspace, results, .vcfd/jobs. Those are mesh,
+# solver, and log output, not credentials. deploy/aws/out holds bearer tokens
+# and launch env, so it is denied.
+#
+# Dropped from the agent-bitcoin posture: macaroons, LND seeds, wallet
+# passwords, Nostr keys. vCFD does not have those files. The Docker socket
+# is not denied: the product runs OpenFOAM through Docker. Treat that socket
+# as high privilege (single-tenant worker) and do not publish it.
+#
+# Linux note: ** globs expand to files that exist at startup. A very large
+# tree can refuse sandbox start. Prefer this profile on the Mac (Seatbelt
+# enforces globs at runtime). .env.example is not matched by **/.env.
+
+[profiles.vcfd]
+extends = "workspace"
+restrict_network = false
+
+deny = [
+    "**/.env",
+    "**/.env.local",
+    "**/*.pem",
+    "**/*.key",
+    "**/id_rsa",
+    "**/id_ed25519",
+    "**/*.token",
+    "**/credentials",
+    "**/credentials.json",
+    "deploy/aws/out",
+    "deploy/aws/out/**",
+]
