@@ -170,3 +170,12 @@ Project config is already set (docker mode):
 grok mcp list
 # tools available after restart / new session in this directory
 ```
+
+---
+
+## Support
+
+Dark Factory  
+Richard Casey  
+richardcaseyhpc@protonmail.com  
++1 970-980-5975
